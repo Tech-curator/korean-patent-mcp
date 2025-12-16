@@ -1,17 +1,17 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.8.15,<0.9.0"]
+build-backend = "uv_build"
 
 [project]
 name = "korean-patent-mcp"
 version = "0.1.0"
 description = "MCP server for KIPRIS (Korean Intellectual Property Rights Information Service) - Search and analyze Korean patents with AI"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = "MIT"
 keywords = ["mcp", "kipris", "patent", "korea", "korean-patent", "intellectual-property", "citation-analysis"]
 authors = [
-    { name = "DiME", email = "contact@dime.kr" }
+    { name = "Tech-curator", email = "tech.curator.kr@gmail.com" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -19,14 +19,13 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = [
-    "mcp>=1.0.0",
+    "mcp>=1.15.0",
+    "smithery>=0.4.2",
     "httpx>=0.27.0",
     "pydantic>=2.0.0",
     "python-dotenv>=1.0.0",
@@ -40,20 +39,21 @@ dev = [
 ]
 
 [project.scripts]
-korean-patent-mcp = "korean_patent_mcp.server:main"
+dev = "smithery.cli.dev:main"
+playground = "smithery.cli.playground:main"
 
 [project.urls]
-Homepage = "https://www.dime.kr"
-Repository = "https://github.com/khreat/korean-patent-mcp"
-Issues = "https://github.com/khreat/korean-patent-mcp/issues"
-Documentation = "https://techcurator.kr"
+Homepage = "https://techcurator.kr"
+Repository = "https://github.com/Tech-curator/korean-patent-mcp"
+Issues = "https://github.com/Tech-curator/korean-patent-mcp/issues"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/korean_patent_mcp"]
+# Smithery server configuration
+[tool.smithery]
+server = "korean_patent_mcp.server:create_server"
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
