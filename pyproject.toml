@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kipris-mcp-server"
+version = "0.1.0"
+description = "MCP server for KIPRIS (Korean Intellectual Property Rights Information Service) patent API"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = ["mcp", "kipris", "patent", "korea", "api", "korean-patent"]
+authors = [
+    { name = "Your Name", email = "your@email.com" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "mcp>=1.0.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.4.0",
+]
+
+[project.scripts]
+kipris-mcp = "kipris_mcp.server:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/kipris-mcp-server"
+Repository = "https://github.com/yourusername/kipris-mcp-server"
+Issues = "https://github.com/yourusername/kipris-mcp-server/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kipris_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
