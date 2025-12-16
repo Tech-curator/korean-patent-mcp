@@ -5,7 +5,6 @@ Korean Patent MCP Server
 import json
 import os
 import sys
-import contextvars
 from typing import Optional
 
 import uvicorn
@@ -14,7 +13,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.middleware.cors import CORSMiddleware
 
 from .kipris_api import KiprisAPIClient, KiprisConfig
-from .middleware import SmitheryConfigMiddleware
+from .middleware import SmitheryConfigMiddleware, smithery_context
 
 
 # =========================================================================
@@ -61,13 +60,8 @@ def init_client_with_key(api_key: str) -> None:
 
 def get_request_config() -> dict:
     """Get full config from current request context."""
-    try:
-        request = contextvars.copy_context().get('request')
-        if hasattr(request, 'scope') and request.scope:
-            return request.scope.get('smithery_config', {})
-    except:
-        pass
-    return {}
+    # ContextVar에서 직접 설정을 가져옴 (middleware에서 저장한 값)
+    return smithery_context.get()
 
 
 def get_config_value(key: str, default=None):
