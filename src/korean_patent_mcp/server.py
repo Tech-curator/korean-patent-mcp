@@ -335,7 +335,17 @@ async def kipris_get_citing_patents(
 
 def main():
     """서버 실행 진입점"""
-    mcp.run()
+    import sys
+    import os
+    
+    # HTTP 모드 확인 (Smithery hosted deployment용)
+    if "--http" in sys.argv or os.getenv("MCP_HTTP_PORT"):
+        port = int(os.getenv("MCP_HTTP_PORT", "8000"))
+        # HTTP/SSE 모드로 실행
+        mcp.run(transport="sse", port=port)
+    else:
+        # 기본 stdio 모드 (로컬 실행)
+        mcp.run()
 
 
 if __name__ == "__main__":

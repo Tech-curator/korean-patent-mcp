@@ -15,8 +15,12 @@ COPY README.md ./
 # Install dependencies using uv
 RUN uv pip install --system -e .
 
-# Set environment variable placeholder (will be provided at runtime)
+# Set environment variable placeholders (will be provided at runtime)
 ENV KIPRIS_API_KEY=""
+ENV MCP_HTTP_PORT="8000"
 
-# Run the MCP server
-CMD ["python", "-m", "korean_patent_mcp.server"]
+# Expose HTTP port for Smithery hosting
+EXPOSE 8000
+
+# Run the MCP server in HTTP mode
+CMD ["python", "-m", "korean_patent_mcp.server", "--http"]

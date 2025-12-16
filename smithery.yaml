@@ -27,9 +27,8 @@ tags:
   - research
 
 startCommand:
-  type: stdio
+  type: http
   configSchema:
-    # JSON Schema defining the configuration options for the MCP
     type: object
     required:
       - kiprisApiKey
@@ -39,9 +38,10 @@ startCommand:
         description: "KIPRIS Plus Open API Key (Get yours at https://plus.kipris.or.kr)"
   commandFunction: |
     (config) => ({
-      command: 'uv',
-      args: ['run', 'korean-patent-mcp'],
+      command: 'python',
+      args: ['-m', 'korean_patent_mcp.server', '--http'],
       env: {
-        KIPRIS_API_KEY: config.kiprisApiKey
+        KIPRIS_API_KEY: config.kiprisApiKey,
+        MCP_HTTP_PORT: '8000'
       }
     })
