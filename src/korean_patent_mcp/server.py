@@ -10,6 +10,7 @@ from typing import Optional
 
 import uvicorn
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.middleware.cors import CORSMiddleware
 
 from .kipris_api import KiprisAPIClient, KiprisConfig
@@ -154,7 +155,13 @@ def format_citing_patents_markdown(citations: list, base_app_num: str) -> str:
 # MCP Server Setup
 # =========================================================================
 
-mcp = FastMCP("korean_patent_mcp")
+# Disable DNS rebinding protection to allow Smithery to connect
+# Or explicitly allow Smithery origins
+transport_security = TransportSecuritySettings(
+    enable_dns_rebinding_protection=False,  # Disable for Smithery compatibility
+)
+
+mcp = FastMCP("korean_patent_mcp", transport_security=transport_security)
 
 
 # =========================================================================
@@ -286,6 +293,7 @@ def main():
         print("Korean Patent MCP Server starting in HTTP mode...", file=sys.stderr)
         
         # Setup Starlette app with streamable HTTP
+        # DNS rebinding protection is disabled via transport_security above
         app = mcp.streamable_http_app()
         
         # IMPORTANT: Add CORS middleware for browser-based clients
@@ -293,7 +301,7 @@ def main():
             CORSMiddleware,
             allow_origins=["*"],
             allow_credentials=True,
-            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_methods=["GET", "POST", "OPTIONS", "DELETE"],
             allow_headers=["*"],
             expose_headers=["mcp-session-id", "mcp-protocol-version"],
             max_age=86400,
