@@ -1,3 +1,20 @@
 # Smithery configuration file
-# Python servers only need to specify the runtime
-runtime: "python"
+runtime: "container"
+
+build:
+  dockerfile: "Dockerfile"
+  dockerBuildPath: "."
+
+startCommand:
+  type: "http"
+  configSchema:
+    type: "object"
+    required:
+      - kiprisApiKey
+    properties:
+      kiprisApiKey:
+        type: "string"
+        title: "KIPRIS API Key"
+        description: "KIPRIS Plus Open API Key (https://plus.kipris.or.kr)"
+  exampleConfig:
+    kiprisApiKey: "your-api-key-here"
