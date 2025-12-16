@@ -256,9 +256,9 @@ MIT License
 
 ## 📞 Contact
 
-- **DiME**: [https://www.dime.kr](https://www.dime.kr)
 - **Tech Curator**: [https://techcurator.kr](https://techcurator.kr)
-
+- **DiME**: [https://www.dime.kr](https://www.dime.kr)
+- **E-mail**: jkh25@techcurator.kr / ceo@techcurator.kr
 ---
 
 Made with ❤️ for Korean patent research

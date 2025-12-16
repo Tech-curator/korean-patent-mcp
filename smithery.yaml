@@ -15,7 +15,7 @@ description: |
   - Support for both markdown and JSON response formats
   - Pagination support for large result sets
 
-author: DiME
+author: Tech-curator
 repository: https://github.com/Tech-curator/korean-patent-mcp
 tags:
   - patent
