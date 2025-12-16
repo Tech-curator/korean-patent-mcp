@@ -6,8 +6,8 @@ import json
 from typing import Optional
 from enum import Enum
 
-from mcp.server.fastmcp import FastMCP
-from pydantic import BaseModel, Field, ConfigDict
+from mcp.server.fastmcp import FastMCP, Context
+from pydantic import BaseModel, Field
 from smithery.decorators import smithery
 
 from .kipris_api import KiprisAPIClient, KiprisConfig
@@ -17,7 +17,7 @@ from .kipris_api import KiprisAPIClient, KiprisConfig
 # Smithery Configuration Schema
 # =========================================================================
 
-class Config(BaseModel):
+class ConfigSchema(BaseModel):
     """Smithery configuration for KIPRIS API"""
     kipris_api_key: str = Field(
         description="KIPRIS Plus Open API Key (Get yours at https://plus.kipris.or.kr)"
@@ -52,7 +52,7 @@ def get_init_error() -> Optional[str]:
 
 
 def init_client_with_key(api_key: str) -> None:
-    """API 키로 클라이언트 초기화 (Smithery용)"""
+    """API 키로 클라이언트 초기화"""
     global _kipris_client, _init_error
     try:
         import os
@@ -155,27 +155,23 @@ def format_citing_patents_markdown(citations: list, base_app_num: str) -> str:
 
 
 # =========================================================================
-# Smithery Server Factory
+# Smithery Server Factory (Smithery 호스팅용)
 # =========================================================================
 
-@smithery.server()
-def create_server(config: Config) -> FastMCP:
+@smithery.server(config_schema=ConfigSchema)
+def create_server():
     """
-    Create and configure the Korean Patent MCP server.
+    Create and return a FastMCP server instance.
     
-    This function is called by Smithery to instantiate the server
-    with the provided configuration.
+    This function is called by Smithery to instantiate the server.
+    Configuration is accessed through ctx.session_config in tools.
     """
-    # Initialize client with the provided API key
-    init_client_with_key(config.kipris_api_key)
+    server = FastMCP(name="korean_patent_mcp")
     
-    # Create FastMCP server
-    mcp = FastMCP("korean_patent_mcp")
-    
-    # Register tools
-    @mcp.tool(name="kipris_search_patents")
+    @server.tool(name="kipris_search_patents")
     async def kipris_search_patents(
         applicant_name: str,
+        ctx: Context,
         page: int = 1,
         page_size: int = 20,
         status: Optional[str] = None,
@@ -193,6 +189,13 @@ def create_server(config: Config) -> FastMCP:
             status: 상태 필터 ('A': 공개, 'R': 등록, 'J': 거절, None: 전체)
             response_format: 응답 형식 ('markdown' 또는 'json')
         """
+        # Get API key from session config
+        session_config = ctx.session_config
+        api_key = session_config.kipris_api_key
+        
+        # Initialize client with session-specific API key
+        init_client_with_key(api_key)
+        
         client = get_kipris_client()
         if client is None:
             error = get_init_error() or "API 클라이언트 초기화 실패"
@@ -214,9 +217,10 @@ def create_server(config: Config) -> FastMCP:
         except Exception as e:
             return f"❌ 검색 오류: {str(e)}"
 
-    @mcp.tool(name="kipris_get_patent_detail")
+    @server.tool(name="kipris_get_patent_detail")
     async def kipris_get_patent_detail(
         application_number: str,
+        ctx: Context,
         response_format: str = "markdown"
     ) -> str:
         """출원번호로 특허의 상세 정보를 조회합니다.
@@ -228,6 +232,11 @@ def create_server(config: Config) -> FastMCP:
             application_number: 출원번호 (필수, 예: '1020200123456')
             response_format: 응답 형식 ('markdown' 또는 'json')
         """
+        # Get API key from session config
+        session_config = ctx.session_config
+        api_key = session_config.kipris_api_key
+        init_client_with_key(api_key)
+        
         client = get_kipris_client()
         if client is None:
             error = get_init_error() or "API 클라이언트 초기화 실패"
@@ -249,9 +258,10 @@ def create_server(config: Config) -> FastMCP:
         except Exception as e:
             return f"❌ 조회 오류: {str(e)}"
 
-    @mcp.tool(name="kipris_get_citing_patents")
+    @server.tool(name="kipris_get_citing_patents")
     async def kipris_get_citing_patents(
         application_number: str,
+        ctx: Context,
         response_format: str = "markdown"
     ) -> str:
         """특정 특허를 인용한 후행 특허들을 조회합니다.
@@ -263,6 +273,11 @@ def create_server(config: Config) -> FastMCP:
             application_number: 기준 특허의 출원번호 (필수)
             response_format: 응답 형식 ('markdown' 또는 'json')
         """
+        # Get API key from session config
+        session_config = ctx.session_config
+        api_key = session_config.kipris_api_key
+        init_client_with_key(api_key)
+        
         client = get_kipris_client()
         if client is None:
             error = get_init_error() or "API 클라이언트 초기화 실패"
@@ -285,11 +300,11 @@ def create_server(config: Config) -> FastMCP:
         except Exception as e:
             return f"❌ 조회 오류: {str(e)}"
     
-    return mcp
+    return server
 
 
 # =========================================================================
-# Local Development Entry Point
+# Local Development Entry Point (로컬 개발용)
 # =========================================================================
 
 # Create default server instance for local development
