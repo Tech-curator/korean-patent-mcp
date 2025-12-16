@@ -211,13 +211,6 @@ npx @modelcontextprotocol/inspector uv run korean-patent-mcp
 smithery dev
 ```
 
-## 📦 Smithery 배포
-
-1. GitHub에 저장소 푸시
-2. [Smithery.ai](https://smithery.ai)에서 "Deploy from GitHub" 선택
-3. 저장소 URL 입력
-4. 자동으로 `smithery.yaml` 감지 및 배포
-
 ## 📁 프로젝트 구조
 
 ```
