@@ -189,7 +189,7 @@ MIT License
 
 ## 📞 Contact
 
-- **DiME (Disclosure Made Easy)**: [https://www.dime.kr](https://www.dime.kr)
+- **DiME**: [https://www.dime.kr](https://www.dime.kr)
 - **Tech Curator**: [https://techcurator.kr](https://techcurator.kr)
 
 ---
