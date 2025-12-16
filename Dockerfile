@@ -18,6 +18,7 @@ RUN uv pip install --system .
 # 4. Environment variables for Smithery
 ENV TRANSPORT=http
 ENV PORT=8081
+ENV PYTHONUNBUFFERED=1  
 
 # 5. Direct Execution - Do NOT use "uv run"
 # Use "python" directly since package is installed in system site-packages
