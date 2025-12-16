@@ -1,17 +1,19 @@
 """
 Korean Patent MCP Server
-한국 특허정보 검색서비스를 위한 MCP 서버
+한국 특허정보 검색서비스를 위한 MCP 서버 (Smithery Container 배포용)
 """
 import json
 import os
 import sys
+import contextvars
 from typing import Optional
-from urllib.parse import parse_qs, urlparse
 
+import uvicorn
 from mcp.server.fastmcp import FastMCP
-from pydantic import BaseModel, Field
+from starlette.middleware.cors import CORSMiddleware
 
 from .kipris_api import KiprisAPIClient, KiprisConfig
+from .middleware import SmitheryConfigMiddleware
 
 
 # =========================================================================
@@ -50,6 +52,27 @@ def init_client_with_key(api_key: str) -> None:
         _init_error = None
     except ValueError as e:
         _init_error = str(e)
+
+
+# =========================================================================
+# Config Access Helpers (per-request configuration)
+# =========================================================================
+
+def get_request_config() -> dict:
+    """Get full config from current request context."""
+    try:
+        request = contextvars.copy_context().get('request')
+        if hasattr(request, 'scope') and request.scope:
+            return request.scope.get('smithery_config', {})
+    except:
+        pass
+    return {}
+
+
+def get_config_value(key: str, default=None):
+    """Get a specific config value from current request."""
+    config = get_request_config()
+    return config.get(key, default)
 
 
 # =========================================================================
@@ -155,6 +178,11 @@ async def kipris_search_patents(
         status: 상태 필터 ('A': 공개, 'R': 등록, 'J': 거절, None: 전체)
         response_format: 응답 형식 ('markdown' 또는 'json')
     """
+    # Get API key from session config or environment
+    api_key = get_config_value("kiprisApiKey") or os.getenv("KIPRIS_API_KEY", "")
+    if api_key:
+        init_client_with_key(api_key)
+    
     client = get_kipris_client()
     if client is None:
         error = get_init_error() or "API 클라이언트 초기화 실패. KIPRIS_API_KEY를 설정해주세요."
@@ -186,6 +214,11 @@ async def kipris_get_patent_detail(
         application_number: 출원번호 (필수, 예: '1020200123456')
         response_format: 응답 형식 ('markdown' 또는 'json')
     """
+    # Get API key from session config or environment
+    api_key = get_config_value("kiprisApiKey") or os.getenv("KIPRIS_API_KEY", "")
+    if api_key:
+        init_client_with_key(api_key)
+    
     client = get_kipris_client()
     if client is None:
         return f"❌ 오류: {get_init_error() or 'API 클라이언트 초기화 실패'}"
@@ -215,6 +248,11 @@ async def kipris_get_citing_patents(
         application_number: 기준 특허의 출원번호 (필수)
         response_format: 응답 형식 ('markdown' 또는 'json')
     """
+    # Get API key from session config or environment
+    api_key = get_config_value("kiprisApiKey") or os.getenv("KIPRIS_API_KEY", "")
+    if api_key:
+        init_client_with_key(api_key)
+    
     client = get_kipris_client()
     if client is None:
         return f"❌ 오류: {get_init_error() or 'API 클라이언트 초기화 실패'}"
@@ -241,20 +279,37 @@ async def kipris_get_citing_patents(
 
 def main():
     """서버 실행 진입점"""
-    # HTTP mode for Smithery Container deployment
-    if "--http" in sys.argv or os.getenv("PORT"):
-        port = int(os.getenv("PORT", "8081"))
-        print(f"Starting MCP server in HTTP mode on port {port}...", file=sys.stderr)
+    transport_mode = os.getenv("TRANSPORT", "stdio")
+    
+    if transport_mode == "http":
+        # HTTP mode for Smithery Container deployment
+        print("Korean Patent MCP Server starting in HTTP mode...", file=sys.stderr)
         
-        # Initialize client from environment variable if provided
-        api_key = os.getenv("KIPRIS_API_KEY", "")
-        if api_key:
-            init_client_with_key(api_key)
+        # Setup Starlette app with streamable HTTP
+        app = mcp.streamable_http_app()
         
-        # Run in streamable-http mode on /mcp endpoint
-        mcp.run(transport="streamable-http", host="0.0.0.0", port=port)
+        # IMPORTANT: Add CORS middleware for browser-based clients
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["*"],
+            expose_headers=["mcp-session-id", "mcp-protocol-version"],
+            max_age=86400,
+        )
+        
+        # Apply SmitheryConfigMiddleware for per-request config extraction
+        app = SmitheryConfigMiddleware(app)
+        
+        # Use Smithery-required PORT environment variable
+        port = int(os.environ.get("PORT", 8081))
+        print(f"Listening on port {port}", file=sys.stderr)
+        
+        uvicorn.run(app, host="0.0.0.0", port=port, log_level="debug")
     else:
         # Default stdio mode for local development
+        print("Korean Patent MCP Server starting in stdio mode...", file=sys.stderr)
         mcp.run()
 
 
