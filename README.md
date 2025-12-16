@@ -2,6 +2,8 @@
 
 > **[한국어 문서는 아래에 있습니다](#-기능) / Korean documentation below**
 
+[![smithery badge](https://smithery.ai/badge/tech-curator/korean-patent-mcp)](https://smithery.ai/server/tech-curator/korean-patent-mcp)
+
 MCP (Model Context Protocol) server for KIPRIS (Korean Intellectual Property Rights Information Service) API.
 
 ## English Documentation
@@ -252,6 +254,7 @@ MIT License
 - **Tech Curator**: [https://techcurator.kr](https://techcurator.kr)
 - **DiME**: [https://www.dime.kr](https://www.dime.kr)
 - **E-mail**: jkh25@techcurator.kr / ceo@techcurator.kr
+
 ---
 
 Made with ❤️ for Korean patent research
