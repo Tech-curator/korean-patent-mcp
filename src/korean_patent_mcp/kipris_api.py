@@ -140,7 +140,7 @@ class KiprisAPIClient:
         
         # 전체 건수
         total_elem = root.find(".//TotalSearchCount")
-        total_count = int(total_elem.text) if total_elem is not None else 0
+        total_count = int(total_elem.text) if (total_elem is not None and total_elem.text) else 0
         
         # 특허 정보 추출
         patents = []

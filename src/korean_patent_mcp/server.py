@@ -5,12 +5,38 @@ Korean Patent MCP Server
 import json
 from typing import Optional
 from enum import Enum
-from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field, ConfigDict
 
 from .kipris_api import KiprisAPIClient, KiprisConfig
+
+
+# =========================================================================
+# Global Client (싱글톤 패턴)
+# =========================================================================
+
+_kipris_client: Optional[KiprisAPIClient] = None
+_init_error: Optional[str] = None
+
+
+def get_kipris_client() -> Optional[KiprisAPIClient]:
+    """KIPRIS API 클라이언트 가져오기 (lazy initialization)"""
+    global _kipris_client, _init_error
+    
+    if _kipris_client is None and _init_error is None:
+        try:
+            config = KiprisConfig.from_env()
+            _kipris_client = KiprisAPIClient(config)
+        except ValueError as e:
+            _init_error = str(e)
+    
+    return _kipris_client
+
+
+def get_init_error() -> Optional[str]:
+    """초기화 에러 메시지 가져오기"""
+    return _init_error
 
 
 # =========================================================================
@@ -172,79 +198,50 @@ def format_citing_patents_markdown(citations: list, base_app_num: str) -> str:
 # MCP Server Setup
 # =========================================================================
 
-@asynccontextmanager
-async def app_lifespan():
-    """서버 생명주기 관리 - API 클라이언트 초기화/정리"""
-    try:
-        config = KiprisConfig.from_env()
-        client = KiprisAPIClient(config)
-        yield {"kipris_client": client}
-    except ValueError as e:
-        yield {"kipris_client": None, "init_error": str(e)}
-    finally:
-        if 'client' in locals():
-            await client.close()
-
-
-# MCP 서버 초기화
-mcp = FastMCP(
-    "korean_patent_mcp",
-    lifespan=app_lifespan
-)
+mcp = FastMCP("korean_patent_mcp")
 
 
 # =========================================================================
 # Tool Definitions
 # =========================================================================
 
-@mcp.tool(
-    name="kipris_search_patents",
-    annotations={
-        "title": "한국 특허 검색 (출원인)",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True
-    }
-)
-async def kipris_search_patents(params: SearchPatentsInput) -> str:
+@mcp.tool(name="kipris_search_patents")
+async def kipris_search_patents(
+    applicant_name: str,
+    page: int = 1,
+    page_size: int = 20,
+    status: Optional[str] = None,
+    response_format: str = "markdown"
+) -> str:
     """출원인명으로 한국 특허를 검색합니다.
     
     KIPRIS(한국특허정보검색서비스) API를 사용하여 특정 출원인(회사, 기관, 개인)의 
     특허를 검색합니다. 페이지네이션을 지원하며, 상태별 필터링이 가능합니다.
     
     Args:
-        params (SearchPatentsInput): 검색 파라미터
-            - applicant_name: 출원인명 (필수)
-            - page: 페이지 번호 (기본값: 1)
-            - page_size: 페이지당 결과 수 (기본값: 20, 최대: 100)
-            - status: 상태 필터 ('A': 공개, 'R': 등록, 'J': 거절)
-            - response_format: 응답 형식 ('markdown' 또는 'json')
+        applicant_name: 출원인명 (필수, 예: '삼성전자', '카카오뱅크')
+        page: 페이지 번호 (기본값: 1)
+        page_size: 페이지당 결과 수 (기본값: 20, 최대: 100)
+        status: 상태 필터 ('A': 공개, 'R': 등록, 'J': 거절, None: 전체)
+        response_format: 응답 형식 ('markdown' 또는 'json')
     
     Returns:
         str: 검색 결과 (마크다운 또는 JSON 형식)
-    
-    Example:
-        - 삼성전자의 등록 특허 검색: applicant_name="삼성전자", status="R"
-        - 대학 산학협력단 특허: applicant_name="서울대학교 산학협력단"
     """
-    from mcp.server.fastmcp import Context
-    ctx = Context.current()
-    
-    client = ctx.request_context.lifespan_state.get("kipris_client")
+    client = get_kipris_client()
     if client is None:
-        error = ctx.request_context.lifespan_state.get("init_error", "API 클라이언트 초기화 실패")
+        error = get_init_error() or "API 클라이언트 초기화 실패"
         return f"❌ 오류: {error}"
     
     try:
         result = await client.search_patents_by_applicant(
-            applicant_name=params.applicant_name,
-            page=params.page,
-            page_size=params.page_size,
-            status=params.status or ""
+            applicant_name=applicant_name,
+            page=page,
+            page_size=min(page_size, 100),
+            status=status or ""
         )
         
-        if params.response_format == ResponseFormat.JSON:
+        if response_format == "json":
             return json.dumps(result, ensure_ascii=False, indent=2)
         else:
             return format_search_result_markdown(result)
@@ -253,51 +250,37 @@ async def kipris_search_patents(params: SearchPatentsInput) -> str:
         return f"❌ 검색 오류: {str(e)}"
 
 
-@mcp.tool(
-    name="kipris_get_patent_detail",
-    annotations={
-        "title": "한국 특허 상세 정보",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True
-    }
-)
-async def kipris_get_patent_detail(params: GetPatentDetailInput) -> str:
+@mcp.tool(name="kipris_get_patent_detail")
+async def kipris_get_patent_detail(
+    application_number: str,
+    response_format: str = "markdown"
+) -> str:
     """출원번호로 특허의 상세 정보를 조회합니다.
     
     특정 특허의 출원번호를 사용하여 상세 정보(제목, 출원인, 초록, IPC 분류 등)를 
     조회합니다.
     
     Args:
-        params (GetPatentDetailInput): 조회 파라미터
-            - application_number: 출원번호 (필수, 예: '1020200123456')
-            - response_format: 응답 형식 ('markdown' 또는 'json')
+        application_number: 출원번호 (필수, 예: '1020200123456')
+        response_format: 응답 형식 ('markdown' 또는 'json')
     
     Returns:
         str: 특허 상세 정보 (마크다운 또는 JSON 형식)
-    
-    Example:
-        - application_number="1020200123456"
-        - application_number="10-2020-0123456" (하이픈 포함도 가능)
     """
-    from mcp.server.fastmcp import Context
-    ctx = Context.current()
-    
-    client = ctx.request_context.lifespan_state.get("kipris_client")
+    client = get_kipris_client()
     if client is None:
-        error = ctx.request_context.lifespan_state.get("init_error", "API 클라이언트 초기화 실패")
+        error = get_init_error() or "API 클라이언트 초기화 실패"
         return f"❌ 오류: {error}"
     
-    app_num = params.application_number.replace("-", "")
+    app_num = application_number.replace("-", "")
     
     try:
         result = await client.get_patent_detail(app_num)
         
         if result is None:
-            return f"❌ 출원번호 `{params.application_number}`에 해당하는 특허를 찾을 수 없습니다."
+            return f"❌ 출원번호 `{application_number}`에 해당하는 특허를 찾을 수 없습니다."
         
-        if params.response_format == ResponseFormat.JSON:
+        if response_format == "json":
             return json.dumps(result, ensure_ascii=False, indent=2)
         else:
             return format_patent_markdown(result, detailed=True)
@@ -306,51 +289,34 @@ async def kipris_get_patent_detail(params: GetPatentDetailInput) -> str:
         return f"❌ 조회 오류: {str(e)}"
 
 
-@mcp.tool(
-    name="kipris_get_citing_patents",
-    annotations={
-        "title": "인용 특허 조회",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True
-    }
-)
-async def kipris_get_citing_patents(params: GetCitingPatentsInput) -> str:
+@mcp.tool(name="kipris_get_citing_patents")
+async def kipris_get_citing_patents(
+    application_number: str,
+    response_format: str = "markdown"
+) -> str:
     """특정 특허를 인용한 후행 특허들을 조회합니다.
     
     기준 특허의 출원번호를 입력하면, 해당 특허를 인용한 모든 후행 특허 목록을 
     반환합니다. 이를 통해 특허의 영향력과 기술 발전 흐름을 파악할 수 있습니다.
     
     Args:
-        params (GetCitingPatentsInput): 조회 파라미터
-            - application_number: 기준 특허의 출원번호 (필수)
-            - response_format: 응답 형식 ('markdown' 또는 'json')
+        application_number: 기준 특허의 출원번호 (필수)
+        response_format: 응답 형식 ('markdown' 또는 'json')
     
     Returns:
         str: 인용 특허 목록 (마크다운 또는 JSON 형식)
-    
-    Example:
-        - 특정 특허를 인용한 후행 특허 찾기: application_number="1020180123456"
-    
-    Note:
-        - 인용 특허가 많은 경우 해당 특허의 기술적 영향력이 큼을 의미합니다
-        - 인용 유형(citation_type)을 통해 심사관 인용/출원인 인용 구분 가능
     """
-    from mcp.server.fastmcp import Context
-    ctx = Context.current()
-    
-    client = ctx.request_context.lifespan_state.get("kipris_client")
+    client = get_kipris_client()
     if client is None:
-        error = ctx.request_context.lifespan_state.get("init_error", "API 클라이언트 초기화 실패")
+        error = get_init_error() or "API 클라이언트 초기화 실패"
         return f"❌ 오류: {error}"
     
-    app_num = params.application_number.replace("-", "")
+    app_num = application_number.replace("-", "")
     
     try:
         result = await client.get_citing_patents(app_num)
         
-        if params.response_format == ResponseFormat.JSON:
+        if response_format == "json":
             return json.dumps({
                 "base_application_number": app_num,
                 "citing_count": len(result),

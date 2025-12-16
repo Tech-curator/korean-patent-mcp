@@ -1,5 +1,72 @@
 # 🇰🇷 Korean Patent MCP
 
+> **[한국어 문서는 아래에 있습니다](#-기능) / Korean documentation below**
+
+MCP (Model Context Protocol) server for KIPRIS (Korean Intellectual Property Rights Information Service) API.
+
+## English Documentation
+
+### Overview
+
+This MCP server enables AI assistants (Claude Desktop, Cursor, Windsurf, etc.) to search and analyze Korean patents through natural language queries. It connects to the official KIPRIS Plus Open API provided by the Korean Intellectual Property Office (KIPO).
+
+### Features
+
+| Tool | Description |
+|------|-------------|
+| `kipris_search_patents` | Search patents by applicant name |
+| `kipris_get_patent_detail` | Get detailed patent information by application number |
+| `kipris_get_citing_patents` | Find patents that cite a specific patent |
+
+### Quick Start
+
+```bash
+# Install via Smithery (recommended)
+npx -y @smithery/cli install korean-patent-mcp --client claude
+
+# Or install via uv
+uv pip install git+https://github.com/Tech-curator/korean-patent-mcp.git
+```
+
+### Requirements
+
+- Python 3.10+
+- KIPRIS Plus Open API Key ([Get your key here](https://plus.kipris.or.kr))
+
+### Configuration
+
+Set the `KIPRIS_API_KEY` environment variable:
+
+```bash
+export KIPRIS_API_KEY="your_api_key_here"
+```
+
+Or add to your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "korean-patent": {
+      "command": "uv",
+      "args": ["run", "korean-patent-mcp"],
+      "env": {
+        "KIPRIS_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+### Example Queries
+
+- "Search for Samsung Electronics' registered patents"
+- "Get details for patent application number 1020200123456"
+- "Find patents that cite application 1020180056789"
+
+---
+
+## 한국어 문서
+
 한국 특허정보 검색서비스(KIPRIS) API를 위한 MCP(Model Context Protocol) 서버입니다.
 
 Claude Desktop, Cursor, Windsurf 또는 다른 MCP 클라이언트와 연동하여 자연어로 한국 특허를 검색하고 분석할 수 있습니다.

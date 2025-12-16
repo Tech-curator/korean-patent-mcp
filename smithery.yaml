@@ -1,6 +1,31 @@
 # Smithery configuration file
 # https://smithery.ai/docs/config#smitheryyaml
 
+# Server metadata (for Smithery registry)
+name: korean-patent-mcp
+description: |
+  MCP server for KIPRIS (Korean Intellectual Property Rights Information Service) API.
+  Enables AI-powered Korean patent search, detailed patent information retrieval, 
+  and citation analysis through the official KIPRIS Plus Open API.
+  
+  Features:
+  - Search patents by applicant name (companies, universities, individuals)
+  - Retrieve detailed patent information by application number
+  - Analyze patent citations and technology influence
+  - Support for both markdown and JSON response formats
+  - Pagination support for large result sets
+
+author: DiME
+repository: https://github.com/Tech-curator/korean-patent-mcp
+tags:
+  - patent
+  - korea
+  - kipris
+  - intellectual-property
+  - citation-analysis
+  - legal
+  - research
+
 startCommand:
   type: stdio
   configSchema:
@@ -11,7 +36,7 @@ startCommand:
     properties:
       kiprisApiKey:
         type: string
-        description: "KIPRIS Plus Open API Key (https://plus.kipris.or.kr에서 발급)"
+        description: "KIPRIS Plus Open API Key (Get yours at https://plus.kipris.or.kr)"
   commandFunction: |
     (config) => ({
       command: 'uv',
