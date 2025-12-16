@@ -6,7 +6,7 @@ import json
 import os
 import sys
 from typing import Optional
-from enum import Enum
+from urllib.parse import parse_qs, urlparse
 
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
@@ -15,7 +15,7 @@ from .kipris_api import KiprisAPIClient, KiprisConfig
 
 
 # =========================================================================
-# Global Client (싱글톤 패턴)
+# Global Client
 # =========================================================================
 
 _kipris_client: Optional[KiprisAPIClient] = None
@@ -23,7 +23,7 @@ _init_error: Optional[str] = None
 
 
 def get_kipris_client() -> Optional[KiprisAPIClient]:
-    """KIPRIS API 클라이언트 가져오기 (lazy initialization)"""
+    """KIPRIS API 클라이언트 가져오기"""
     global _kipris_client, _init_error
     
     if _kipris_client is None and _init_error is None:
@@ -37,7 +37,6 @@ def get_kipris_client() -> Optional[KiprisAPIClient]:
 
 
 def get_init_error() -> Optional[str]:
-    """초기화 에러 메시지 가져오기"""
     return _init_error
 
 
@@ -54,21 +53,10 @@ def init_client_with_key(api_key: str) -> None:
 
 
 # =========================================================================
-# Response Format
-# =========================================================================
-
-class ResponseFormat(str, Enum):
-    """응답 형식"""
-    MARKDOWN = "markdown"
-    JSON = "json"
-
-
-# =========================================================================
 # Formatting Helpers
 # =========================================================================
 
 def format_patent_markdown(patent: dict, detailed: bool = False) -> str:
-    """특허 정보를 마크다운으로 포맷팅"""
     lines = []
     lines.append(f"### {patent.get('title', '제목 없음')}")
     lines.append("")
@@ -79,10 +67,8 @@ def format_patent_markdown(patent: dict, detailed: bool = False) -> str:
     
     if patent.get('opening_number'):
         lines.append(f"- **공개번호**: {patent.get('opening_number')} ({patent.get('opening_date', '-')})")
-    
     if patent.get('registration_number'):
         lines.append(f"- **등록번호**: {patent.get('registration_number')} ({patent.get('registration_date', '-')})")
-    
     if detailed:
         if patent.get('ipc_number'):
             lines.append(f"- **IPC 분류**: {patent.get('ipc_number')}")
@@ -95,9 +81,8 @@ def format_patent_markdown(patent: dict, detailed: bool = False) -> str:
 
 
 def format_search_result_markdown(result: dict) -> str:
-    """검색 결과를 마크다운으로 포맷팅"""
     lines = []
-    lines.append(f"## 검색 결과")
+    lines.append("## 검색 결과")
     lines.append("")
     lines.append(f"총 **{result['total_count']:,}**건 중 {len(result['patents'])}건 표시 (페이지 {result['page']})")
     lines.append("")
@@ -107,7 +92,7 @@ def format_search_result_markdown(result: dict) -> str:
         return "\n".join(lines)
     
     for i, patent in enumerate(result['patents'], 1):
-        lines.append(f"---")
+        lines.append("---")
         lines.append(f"**[{i}]** {patent.get('title', '제목 없음')}")
         lines.append(f"- 출원번호: `{patent.get('application_number', '-')}`")
         lines.append(f"- 출원인: {patent.get('applicant', '-')}")
@@ -115,16 +100,15 @@ def format_search_result_markdown(result: dict) -> str:
         lines.append("")
     
     if result.get('has_more'):
-        lines.append(f"---")
+        lines.append("---")
         lines.append(f"📄 다음 페이지: `page={result['next_page']}`")
     
     return "\n".join(lines)
 
 
 def format_citing_patents_markdown(citations: list, base_app_num: str) -> str:
-    """인용 특허 목록을 마크다운으로 포맷팅"""
     lines = []
-    lines.append(f"## 인용 특허 조회 결과")
+    lines.append("## 인용 특허 조회 결과")
     lines.append("")
     lines.append(f"기준 특허 `{base_app_num}`를 인용한 후행 특허: **{len(citations)}**건")
     lines.append("")
@@ -134,7 +118,7 @@ def format_citing_patents_markdown(citations: list, base_app_num: str) -> str:
         return "\n".join(lines)
     
     for i, cite in enumerate(citations, 1):
-        lines.append(f"---")
+        lines.append("---")
         lines.append(f"**[{i}]** 출원번호: `{cite.get('citing_application_number', '-')}`")
         lines.append(f"- 상태: {cite.get('status_name', '-')} ({cite.get('status_code', '-')})")
         lines.append(f"- 인용유형: {cite.get('citation_type_name', '-')}")
@@ -164,9 +148,6 @@ async def kipris_search_patents(
 ) -> str:
     """출원인명으로 한국 특허를 검색합니다.
     
-    KIPRIS(한국특허정보검색서비스) API를 사용하여 특정 출원인(회사, 기관, 개인)의 
-    특허를 검색합니다. 페이지네이션을 지원하며, 상태별 필터링이 가능합니다.
-    
     Args:
         applicant_name: 출원인명 (필수, 예: '삼성전자', '카카오뱅크')
         page: 페이지 번호 (기본값: 1)
@@ -189,9 +170,7 @@ async def kipris_search_patents(
         
         if response_format == "json":
             return json.dumps(result, ensure_ascii=False, indent=2)
-        else:
-            return format_search_result_markdown(result)
-            
+        return format_search_result_markdown(result)
     except Exception as e:
         return f"❌ 검색 오류: {str(e)}"
 
@@ -203,31 +182,24 @@ async def kipris_get_patent_detail(
 ) -> str:
     """출원번호로 특허의 상세 정보를 조회합니다.
     
-    특정 특허의 출원번호를 사용하여 상세 정보(제목, 출원인, 초록, IPC 분류 등)를 
-    조회합니다.
-    
     Args:
         application_number: 출원번호 (필수, 예: '1020200123456')
         response_format: 응답 형식 ('markdown' 또는 'json')
     """
     client = get_kipris_client()
     if client is None:
-        error = get_init_error() or "API 클라이언트 초기화 실패"
-        return f"❌ 오류: {error}"
+        return f"❌ 오류: {get_init_error() or 'API 클라이언트 초기화 실패'}"
     
     app_num = application_number.replace("-", "")
     
     try:
         result = await client.get_patent_detail(app_num)
-        
         if result is None:
             return f"❌ 출원번호 `{application_number}`에 해당하는 특허를 찾을 수 없습니다."
         
         if response_format == "json":
             return json.dumps(result, ensure_ascii=False, indent=2)
-        else:
-            return format_patent_markdown(result, detailed=True)
-            
+        return format_patent_markdown(result, detailed=True)
     except Exception as e:
         return f"❌ 조회 오류: {str(e)}"
 
@@ -239,17 +211,13 @@ async def kipris_get_citing_patents(
 ) -> str:
     """특정 특허를 인용한 후행 특허들을 조회합니다.
     
-    기준 특허의 출원번호를 입력하면, 해당 특허를 인용한 모든 후행 특허 목록을 
-    반환합니다. 이를 통해 특허의 영향력과 기술 발전 흐름을 파악할 수 있습니다.
-    
     Args:
         application_number: 기준 특허의 출원번호 (필수)
         response_format: 응답 형식 ('markdown' 또는 'json')
     """
     client = get_kipris_client()
     if client is None:
-        error = get_init_error() or "API 클라이언트 초기화 실패"
-        return f"❌ 오류: {error}"
+        return f"❌ 오류: {get_init_error() or 'API 클라이언트 초기화 실패'}"
     
     app_num = application_number.replace("-", "")
     
@@ -262,9 +230,7 @@ async def kipris_get_citing_patents(
                 "citing_count": len(result),
                 "citing_patents": result
             }, ensure_ascii=False, indent=2)
-        else:
-            return format_citing_patents_markdown(result, app_num)
-            
+        return format_citing_patents_markdown(result, app_num)
     except Exception as e:
         return f"❌ 조회 오류: {str(e)}"
 
@@ -275,19 +241,18 @@ async def kipris_get_citing_patents(
 
 def main():
     """서버 실행 진입점"""
-    # Check for HTTP mode (Smithery Container deployment)
+    # HTTP mode for Smithery Container deployment
     if "--http" in sys.argv or os.getenv("PORT"):
-        # HTTP/SSE mode for Smithery hosting
-        port = int(os.getenv("PORT", "8000"))
+        port = int(os.getenv("PORT", "8081"))
         print(f"Starting MCP server in HTTP mode on port {port}...", file=sys.stderr)
         
-        # Initialize client from environment variable
+        # Initialize client from environment variable if provided
         api_key = os.getenv("KIPRIS_API_KEY", "")
         if api_key:
             init_client_with_key(api_key)
         
-        # Run in SSE transport mode
-        mcp.run(transport="sse")
+        # Run in streamable-http mode on /mcp endpoint
+        mcp.run(transport="streamable-http", host="0.0.0.0", port=port)
     else:
         # Default stdio mode for local development
         mcp.run()

@@ -1,10 +1,10 @@
-# Korean Patent MCP Server - Container Deployment
+# Korean Patent MCP Server - Smithery Container Deployment
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install uv for dependency management
-RUN pip install --no-cache-dir uv
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # Copy project files
 COPY pyproject.toml uv.lock ./
@@ -12,14 +12,10 @@ COPY src/ ./src/
 COPY README.md ./
 
 # Install dependencies
-RUN uv pip install --system -e .
+RUN uv sync --frozen
 
-# Environment variables (will be overridden at runtime)
-ENV KIPRIS_API_KEY=""
-ENV PORT=8000
+# Smithery sets PORT to 8081
+ENV PORT=8081
 
-# Expose the HTTP port
-EXPOSE 8000
-
-# Run the MCP server in HTTP mode
-CMD ["python", "-m", "korean_patent_mcp.server", "--http"]
+# Start the MCP server
+CMD ["uv", "run", "python", "-m", "korean_patent_mcp.server", "--http"]
