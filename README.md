@@ -1,14 +1,14 @@
-# 🇰🇷 KIPRIS MCP Server
+# 🇰🇷 Korean Patent MCP
 
 한국 특허정보 검색서비스(KIPRIS) API를 위한 MCP(Model Context Protocol) 서버입니다.
 
 Claude Desktop, Cursor, Windsurf 또는 다른 MCP 클라이언트와 연동하여 자연어로 한국 특허를 검색하고 분석할 수 있습니다.
 
-[![Smithery](https://smithery.ai/badge/kipris-mcp)](https://smithery.ai/server/kipris-mcp)
+[![Smithery](https://smithery.ai/badge/korean-patent-mcp)](https://smithery.ai/server/korean-patent-mcp)
 
 ## ✨ 기능
 
-### Core Tools (구현됨)
+### Core Tools
 
 | Tool | 설명 |
 |------|------|
@@ -27,22 +27,20 @@ Claude Desktop, Cursor, Windsurf 또는 다른 MCP 클라이언트와 연동하�
 
 ### 방법 1: Smithery를 통한 설치 (권장)
 
-가장 쉬운 방법입니다. [Smithery](https://smithery.ai)를 통해 한 줄로 설치할 수 있습니다:
-
 ```bash
 # Smithery CLI 설치 (처음 한 번만)
 npm install -g @smithery/cli
 
-# KIPRIS MCP 서버 설치
-smithery install kipris-mcp --client claude
+# Korean Patent MCP 서버 설치
+smithery install korean-patent-mcp --client claude
 ```
 
 ### 방법 2: uv를 사용한 로컬 설치
 
 ```bash
 # 저장소 클론
-git clone https://github.com/yourusername/kipris-mcp-server.git
-cd kipris-mcp-server
+git clone https://github.com/khreat/korean-patent-mcp.git
+cd korean-patent-mcp
 
 # uv로 설치 (권장)
 uv pip install -e .
@@ -82,9 +80,9 @@ export KIPRIS_API_KEY="your_api_key_here"
 ```json
 {
   "mcpServers": {
-    "kipris": {
+    "korean-patent": {
       "command": "uv",
-      "args": ["run", "kipris-mcp"],
+      "args": ["run", "korean-patent-mcp"],
       "env": {
         "KIPRIS_API_KEY": "your_api_key_here"
       }
@@ -99,9 +97,9 @@ MCP 설정에서 다음을 추가합니다:
 
 ```json
 {
-  "kipris": {
+  "korean-patent": {
     "command": "uv",
-    "args": ["run", "kipris-mcp"],
+    "args": ["run", "korean-patent-mcp"],
     "env": {
       "KIPRIS_API_KEY": "your_api_key_here"
     }
@@ -137,45 +135,16 @@ Claude Desktop에서 다음과 같이 질문할 수 있습니다:
 ### MCP Inspector로 테스트
 
 ```bash
-# MCP Inspector 설치
-npm install -g @modelcontextprotocol/inspector
-
-# 서버 테스트
-npx @modelcontextprotocol/inspector uv run kipris-mcp
+npx @modelcontextprotocol/inspector uv run korean-patent-mcp
 ```
 
 ### Smithery Dev 모드
 
 ```bash
-# Smithery CLI 설치
-npm install -g @smithery/cli
-
-# 개발 서버 실행 (hot-reload)
 smithery dev
 ```
 
-### 직접 실행 테스트
-
-```bash
-uv run python -c "
-import asyncio
-from kipris_mcp.kipris_api import KiprisAPIClient
-
-async def test():
-    client = KiprisAPIClient()
-    result = await client.search_patents_by_applicant('삼성전자', page_size=5)
-    print(f'총 {result[\"total_count\"]}건 검색됨')
-    for p in result['patents']:
-        print(f'- {p[\"title\"]}')
-    await client.close()
-
-asyncio.run(test())
-"
-```
-
 ## 📦 Smithery 배포
-
-이 서버를 Smithery에 직접 배포하려면:
 
 1. GitHub에 저장소 푸시
 2. [Smithery.ai](https://smithery.ai)에서 "Deploy from GitHub" 선택
@@ -185,15 +154,14 @@ asyncio.run(test())
 ## 📁 프로젝트 구조
 
 ```
-kipris-mcp-server/
+korean-patent-mcp/
 ├── pyproject.toml          # 패키지 설정 (uv/pip 호환)
 ├── smithery.yaml           # Smithery 배포 설정
-├── README.md               # 이 파일
-├── .env.example            # 환경변수 예제
-├── .gitignore
+├── README.md
+├── .env.example
 └── src/
-    └── kipris_mcp/
-        ├── __init__.py     # 패키지 초기화
+    └── korean_patent_mcp/
+        ├── __init__.py
         ├── server.py       # MCP 서버 & Tool 정의
         └── kipris_api.py   # KIPRIS API 클라이언트
 ```
@@ -218,6 +186,11 @@ MIT License
 ## 🤝 기여
 
 버그 리포트, 기능 제안, PR 모두 환영합니다!
+
+## 📞 Contact
+
+- **DiME (Disclosure Made Easy)**: [https://www.dime.kr](https://www.dime.kr)
+- **Tech Curator**: [https://techcurator.kr](https://techcurator.kr)
 
 ---
 

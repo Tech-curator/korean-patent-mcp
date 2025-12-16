@@ -3,25 +3,27 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "kipris-mcp-server"
+name = "korean-patent-mcp"
 version = "0.1.0"
-description = "MCP server for KIPRIS (Korean Intellectual Property Rights Information Service) patent API"
+description = "MCP server for KIPRIS (Korean Intellectual Property Rights Information Service) - Search and analyze Korean patents with AI"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-keywords = ["mcp", "kipris", "patent", "korea", "api", "korean-patent"]
+keywords = ["mcp", "kipris", "patent", "korea", "korean-patent", "intellectual-property", "citation-analysis"]
 authors = [
-    { name = "Your Name", email = "your@email.com" }
+    { name = "DiME", email = "contact@dime.kr" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = [
     "mcp>=1.0.0",
@@ -38,15 +40,16 @@ dev = [
 ]
 
 [project.scripts]
-kipris-mcp = "kipris_mcp.server:main"
+korean-patent-mcp = "korean_patent_mcp.server:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/kipris-mcp-server"
-Repository = "https://github.com/yourusername/kipris-mcp-server"
-Issues = "https://github.com/yourusername/kipris-mcp-server/issues"
+Homepage = "https://www.dime.kr"
+Repository = "https://github.com/khreat/korean-patent-mcp"
+Issues = "https://github.com/khreat/korean-patent-mcp/issues"
+Documentation = "https://techcurator.kr"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/kipris_mcp"]
+packages = ["src/korean_patent_mcp"]
 
 [tool.ruff]
 line-length = 100

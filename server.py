@@ -1,5 +1,5 @@
 """
-KIPRIS MCP Server
+Korean Patent MCP Server
 한국 특허정보 검색서비스를 위한 MCP 서버
 """
 import json
@@ -172,7 +172,6 @@ def format_citing_patents_markdown(citations: list, base_app_num: str) -> str:
 # MCP Server Setup
 # =========================================================================
 
-# API 클라이언트를 lifespan으로 관리
 @asynccontextmanager
 async def app_lifespan():
     """서버 생명주기 관리 - API 클라이언트 초기화/정리"""
@@ -181,7 +180,6 @@ async def app_lifespan():
         client = KiprisAPIClient(config)
         yield {"kipris_client": client}
     except ValueError as e:
-        # API 키 없이도 서버는 시작 (에러는 Tool 호출 시 발생)
         yield {"kipris_client": None, "init_error": str(e)}
     finally:
         if 'client' in locals():
@@ -190,7 +188,7 @@ async def app_lifespan():
 
 # MCP 서버 초기화
 mcp = FastMCP(
-    "kipris_mcp",
+    "korean_patent_mcp",
     lifespan=app_lifespan
 )
 
@@ -202,7 +200,7 @@ mcp = FastMCP(
 @mcp.tool(
     name="kipris_search_patents",
     annotations={
-        "title": "KIPRIS 특허 검색 (출원인)",
+        "title": "한국 특허 검색 (출원인)",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
@@ -233,7 +231,6 @@ async def kipris_search_patents(params: SearchPatentsInput) -> str:
     from mcp.server.fastmcp import Context
     ctx = Context.current()
     
-    # API 클라이언트 가져오기
     client = ctx.request_context.lifespan_state.get("kipris_client")
     if client is None:
         error = ctx.request_context.lifespan_state.get("init_error", "API 클라이언트 초기화 실패")
@@ -259,7 +256,7 @@ async def kipris_search_patents(params: SearchPatentsInput) -> str:
 @mcp.tool(
     name="kipris_get_patent_detail",
     annotations={
-        "title": "KIPRIS 특허 상세 정보",
+        "title": "한국 특허 상세 정보",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
@@ -292,7 +289,6 @@ async def kipris_get_patent_detail(params: GetPatentDetailInput) -> str:
         error = ctx.request_context.lifespan_state.get("init_error", "API 클라이언트 초기화 실패")
         return f"❌ 오류: {error}"
     
-    # 출원번호 정규화 (하이픈 제거)
     app_num = params.application_number.replace("-", "")
     
     try:
@@ -313,7 +309,7 @@ async def kipris_get_patent_detail(params: GetPatentDetailInput) -> str:
 @mcp.tool(
     name="kipris_get_citing_patents",
     annotations={
-        "title": "KIPRIS 인용 특허 조회",
+        "title": "인용 특허 조회",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
@@ -349,7 +345,6 @@ async def kipris_get_citing_patents(params: GetCitingPatentsInput) -> str:
         error = ctx.request_context.lifespan_state.get("init_error", "API 클라이언트 초기화 실패")
         return f"❌ 오류: {error}"
     
-    # 출원번호 정규화
     app_num = params.application_number.replace("-", "")
     
     try:
@@ -374,9 +369,6 @@ async def kipris_get_citing_patents(params: GetCitingPatentsInput) -> str:
 
 def main():
     """서버 실행 진입점"""
-    import sys
-    
-    # stdio transport로 실행 (Claude Desktop 연동)
     mcp.run()
 
 
